@@ -12,7 +12,7 @@ function logToFile(message) {
     const logMessage = `${new Date().toISOString()} - ${message}\n`;
     fs.appendFileSync(logFilePath, logMessage, (err) => {
         if (err) {
-            npm 
+            npm
             console.error('Failed to write to log file:', err);
         }
     });
@@ -27,6 +27,24 @@ app.get('/hits', (req, res) => {
         logToFile('Accessed /hits endpoint');
         console.log("ipHIts", Object.fromEntries(ipHits))
         return res.status(200).json({ totalHits, ipHits: Object.fromEntries(ipHits) });
+
+    } catch (error) {
+        logToFile(`Error in /hits endpoint: ${error.message}`);
+        console.log(error.message)
+        return res.status(401).json({ message: 'Bad Gateway' });
+    }
+})
+app.get('/logs', (req, res) => {
+    try {
+        const { who } = req.headers
+        if (who != "yash") {
+            logToFile('Invalid Token access attempt in /hits endpoint');
+            return res.status(200).json({ message: 'Invalid Token' });
+        }
+        console.log();
+        const log = fs.readFileSync('./logs.txt', { encoding: 'utf8' })
+        // console.log("ipHIts", Object.fromEntries(ipHits))
+        return res.status(200).json({ log });
 
     } catch (error) {
         logToFile(`Error in /hits endpoint: ${error.message}`);
@@ -80,6 +98,17 @@ app.post('/second-largest', (req, res) => {
         return res.status(401).json({ message: 'Bad Gateway' });
 
     }
+});
+// Catch-all 404 handler for undefined routes
+app.use((req, res, next) => {
+    logToFile(`404 - Not Found: ${req.originalUrl}`);
+    res.status(404).json({ message: 'Endpoint not found' });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    logToFile(`Error: ${err.message}`);
+    res.status(500).json({ message: 'Internal Server Error' });
 });
 app.listen(3000, () => {
     logToFile("Server started at port 3000");
